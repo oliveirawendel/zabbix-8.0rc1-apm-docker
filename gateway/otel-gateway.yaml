@@ -10,7 +10,6 @@ processors:
     limit_percentage: 75
     spike_limit_percentage: 20
 
-  # Se a app não definiu service.name, usa o hostname (= nome do container)
   transform/service_name:
     error_mode: ignore
     trace_statements:
@@ -26,9 +25,6 @@ processors:
         statements:
           - set(attributes["service.name"], attributes["host.name"]) where IsMatch(attributes["service.name"], "^unknown_service") and attributes["host.name"] != nil
 
-  # Agrupa os spans por TraceId e só libera o trace depois de decision_wait,
-  # para que o span raiz (shop-loadgen) chegue antes do trace ser enviado ao proxy.
-  # always_sample não descarta nada: o processador é usado só como buffer.
   tail_sampling:
     decision_wait: 10s
     num_traces: 50000
