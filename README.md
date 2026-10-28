@@ -177,16 +177,6 @@ Os cinco serviços sobem com este compose. O `compose.override.yaml` é aplicado
 | `shop-api` | Fachada pública; encaminha para users e orders e faz o *fan-out* de `/api/summary` | `8000` |
 | `shop-loadgen` | Gera tráfego contínuo contra a API | nenhuma |
 
-Teste a API:
-
-```bash
-curl -s http://localhost:8000/health
-curl -s http://localhost:8000/api/users
-curl -s http://localhost:8000/api/summary/1
-```
-
-> Respostas `502 upstream unavailable` logo após a subida são normais: o `shop-api` pode iniciar antes do `shop-users` e do `shop-orders` estarem prontos. Os próximos requests devem funcionar.
-
 ### 8. Valide os traces
 
 Espere cerca de 15 segundos (o gateway segura os traces por 10 segundos) e depois abra **APM → Traces** no frontend.
