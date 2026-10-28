@@ -59,7 +59,7 @@ A ordem importa. As pastas `proxy/`, `gateway/` e `shop/` usam a rede `zabbix8_z
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git
+git clone https://github.com/oliveirawendel/zabbix-8.0rc1-apm-docker.git
 cd SEU_REPOSITORIO
 ```
 
