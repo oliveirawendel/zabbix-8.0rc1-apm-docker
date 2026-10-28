@@ -1,0 +1,92 @@
+x-otel: &otel
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-gateway:4317
+  OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+  OTEL_TRACES_EXPORTER: otlp
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: none
+  OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "false"
+
+x-db: &db
+  DB_HOST: shop-db
+  DB_NAME: shop
+  DB_USER: shop
+  DB_PASSWORD: shop
+
+services:
+  shop-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shop
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD: shop
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - shop_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shop -d shop"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [zbx]
+
+  shop-users:
+    build: { context: ., args: { APP: users } }
+    image: shop-lab-users
+    restart: unless-stopped
+    environment:
+      <<: [*otel, *db]
+      OTEL_SERVICE_NAME: shop-users
+    depends_on:
+      shop-db: { condition: service_healthy }
+    networks: [zbx]
+
+  shop-orders:
+    build: { context: ., args: { APP: orders } }
+    image: shop-lab-orders
+    restart: unless-stopped
+    environment:
+      <<: [*otel, *db]
+      OTEL_SERVICE_NAME: shop-orders
+      USERS_URL: http://shop-users:5001
+    depends_on:
+      shop-db: { condition: service_healthy }
+      shop-users: { condition: service_started }
+    networks: [zbx]
+
+  shop-api:
+    build: { context: ., args: { APP: api } }
+    image: shop-lab-api
+    restart: unless-stopped
+    environment:
+      <<: *otel
+      OTEL_SERVICE_NAME: shop-api
+      USERS_URL: http://shop-users:5001
+      ORDERS_URL: http://shop-orders:5002
+    ports:
+      - "8000:8000"
+    depends_on:
+      - shop-users
+      - shop-orders
+    networks: [zbx]
+
+  shop-loadgen:
+    build: { context: ., args: { APP: loadgen } }
+    image: shop-lab-loadgen
+    restart: unless-stopped
+    environment:
+      <<: *otel
+      OTEL_SERVICE_NAME: shop-loadgen
+      TARGET: http://shop-api:8000
+      INTERVAL: "0.5"
+    depends_on:
+      - shop-api
+    networks: [zbx]
+
+networks:
+  zbx:
+    external: true
+    name: zabbix8_zbx
+
+volumes:
+  shop_db_data:

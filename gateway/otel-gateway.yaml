@@ -1,0 +1,52 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 75
+    spike_limit_percentage: 20
+
+  # Se a app não definiu service.name, usa o hostname (= nome do container)
+  transform/service_name:
+    error_mode: ignore
+    trace_statements:
+      - context: resource
+        statements:
+          - set(attributes["service.name"], attributes["host.name"]) where IsMatch(attributes["service.name"], "^unknown_service") and attributes["host.name"] != nil
+    metric_statements:
+      - context: resource
+        statements:
+          - set(attributes["service.name"], attributes["host.name"]) where IsMatch(attributes["service.name"], "^unknown_service") and attributes["host.name"] != nil
+    log_statements:
+      - context: resource
+        statements:
+          - set(attributes["service.name"], attributes["host.name"]) where IsMatch(attributes["service.name"], "^unknown_service") and attributes["host.name"] != nil
+
+  batch: {}
+
+exporters:
+  otlp:
+    endpoint: zabbix-proxy:14317
+    tls:
+      insecure: true
+    sending_queue:
+      enabled: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/service_name, batch]
+      exporters: [otlp]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/service_name, batch]
+      exporters: [otlp]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/service_name, batch]
+      exporters: [otlp]

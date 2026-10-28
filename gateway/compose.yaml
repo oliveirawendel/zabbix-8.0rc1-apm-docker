@@ -1,0 +1,15 @@
+services:
+  otel-gateway:
+    image: otel/opentelemetry-collector-contrib:0.161.0
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-gateway.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"
+    networks: [zbx]
+
+networks:
+  zbx:
+    external: true
+    name: zabbix8_zbx
